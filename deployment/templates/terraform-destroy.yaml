@@ -1,0 +1,55 @@
+jobs:
+  - deployment: terraform_apply
+    continueOnError: false
+    environment: 'DestroyEnvironments'
+    # timeoutInMinutes: 120
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - checkout: self
+
+            - task: TerraformInstaller@1
+              displayName: 'install'
+              inputs:
+                terraformVersion: 'latest'
+            - task: replacetokens@5
+              inputs:
+                rootDirectory: '$(System.DefaultWorkingDirectory)'
+                targetFiles: '**/tfvars/vars.tfvars'
+                encoding: 'auto'
+                tokenPattern: 'default'
+                writeBOM: true
+                actionOnMissing: 'warn'
+                keepToken: false
+                actionOnNoFiles: 'continue'
+                enableTransforms: false
+                enableRecursion: false
+                useLegacyPattern: false
+                enableTelemetry: false
+            - task: TerraformTaskV4@4
+              displayName: 'init'
+              inputs:
+                provider: 'azurerm'
+                command: 'init'
+                backbackend-config: "backend.hcl"
+                workingDirectory: '${{ parameters.workingDirectory }}'
+            - task: TerraformTaskV4@4
+              displayName: 'Select Workspace'
+              inputs:
+                command: workspace
+                workspaceSubCommand: select
+                workspaceName: '${{ parameters.environment }}'
+                workingDirectory: '${{ parameters.workingDirectory }}'
+            - task: TerraformTaskV4@4
+              displayName: 'destroy'
+              condition: and(succeeded(), eq(variables['action'], 'Destroy'))
+              inputs:
+                provider: 'azurerm'
+                command: 'destroy'
+                commandOptions:
+                  '-var build_id=$(Build.BuildId) 
+                  -input=false -auto-approve -var-file="../tfvars/vars.tfvars" -var
+                  PAT="$(System.AccessToken)"'
+                environmentServiceNameAzureRM: '${{ parameters.backendServiceArm }}'
+                workingDirectory: '${{ parameters.workingDirectory }}'

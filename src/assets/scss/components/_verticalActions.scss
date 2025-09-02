@@ -1,0 +1,17 @@
+@import '../variables';
+
+.v-actions{
+    .dropdown-menu{
+        background-color: $unne-primary;
+        border: none;
+        min-width: 0;
+        padding: 0;
+        .dropdown-item{
+            padding: 1rem;
+            color: $white;
+            @include hover-focus{
+                background-color: transparent;
+            }
+        }
+    }
+}

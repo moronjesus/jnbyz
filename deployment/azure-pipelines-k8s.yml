@@ -1,0 +1,97 @@
+name: $(BuildDefinitionName)_$(date:yyyyMMdd)$(rev:.r)
+
+trigger:
+  batch: true
+  branches:
+    include:
+      - develop
+      - testpre
+      - feature/docker
+      - master
+
+pr: none
+
+parameters:
+  - name: Action
+    displayName: Action
+    type: string
+    default: "Apply"
+    values:
+      - Plan
+      - Apply
+      - Destroy
+
+variables:
+  - ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+      - group: MEMBRESIASFRONT_PROD
+      - name: variableGroupName
+        value: "MEMBRESIASFRONT_PROD"
+  - ${{ elseif eq(variables['Build.SourceBranchName'], 'testpre') }}:
+      - group: MEMBRESIASFRONT_TESTPRE
+      - name: variableGroupName
+        value: "MEMBRESIASFRONT_TESTPRE"
+  - ${{ elseif eq(variables['Build.SourceBranchName'], 'develop') }}:
+      - group: MEMBRESIASFRONT_DEV
+      - name: variableGroupName
+        value: "MEMBRESIASFRONT_DEV"
+  - ${{ else }}:
+      - group: MEMBRESIASFRONT_OTHER
+      - name: variableGroupName
+        value: "MEMBRESIASFRONT_OTHER"
+  - name: project
+    value: "membresiasfront"
+  - name: dockerfile
+    value: "$(Build.SourcesDirectory)/Dockerfile"
+  - name: tag
+    value: "$(Build.BuildId)"
+  - name: branch
+    value: $(Build.SourceBranchName)
+  - name: vmImageName
+    value: "ubuntu-latest"
+  - name: action
+    value: ${{ parameters.Action }}
+  - name: environment
+    ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+      value: "prod"
+    ${{ elseif eq(variables['Build.SourceBranchName'], 'testpre') }}:
+      value: "testpre"
+    ${{ elseif eq(variables['Build.SourceBranchName'], 'develop') }}:
+      value: "develop"
+    ${{ else }}:
+      value: "other"
+
+stages:
+  - stage: terraform
+    displayName: Deploy to K8S
+    condition: ne('${{ parameters.Action }}', 'Destroy')
+    ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+      pool:
+        name: Default
+        demands:
+          - environment -equals prod
+    jobs:
+      - template: templates/terraform-apply.yaml
+        parameters:
+          backendServiceArm: '$(backendServiceArm)'
+          backendServiceArmTR: '$(backendServiceArmTR)'
+          workingDirectory: "$(System.DefaultWorkingDirectory)/deployment/terraform/"
+          repository: "$(project)-$(Build.SourceBranchName)"
+          branch: $(Build.SourceBranchName)
+          environment: ${{ variables.environment }}
+
+  - stage: terraform_destroy
+    displayName: Terraform Destroy
+    condition: contains('${{ parameters.Action }}', 'Destroy')
+    ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+      pool:
+        name: Default
+        demands:
+          - environment -equals prod
+    jobs:
+      - template: templates/terraform-destroy.yaml
+        parameters:
+          backendServiceArm: '$(backendServiceArm)'
+          workingDirectory: "$(System.DefaultWorkingDirectory)/deployment/terraform/"
+          environment: ${{ variables.environment }}
+          job_name: "terraform_destroy_aci"
+          displayName: Terraform Destroy K8S

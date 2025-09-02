@@ -1,0 +1,65 @@
+@import '../variables';
+
+.headernav{
+    .navbar{
+        padding: 8px;
+        display: flex;
+        justify-content: space-between;
+        .sidenav-toggler{
+            padding: 12px;
+            .sidenav-toggler-line{
+                width: 18px;
+                height: 2px;
+                background-color: $unne-primary;
+                display: block;
+                position: relative;
+                
+            }
+            
+            .sidenav-toggler-line:not(:last-child) {
+                margin-bottom: 3px;
+            }
+        }
+        button{
+            background-color: transparent !important;
+            color: $unne-primary;
+            border: none;
+            border-radius: 0;
+            @include hover-focus{
+                box-shadow: none;
+            }
+
+            &:active{
+                background-color: transparent;
+                box-shadow: none !important;
+            }
+        }
+    }
+    
+}
+
+.sidenav-pinned{
+    .navbar{
+        .sidenav-toggler{
+            .sidenav-toggler-line{
+                width: 18px ;
+                &:nth-child(1), &:nth-child(3){
+                    width: 13px;
+                }
+            }
+        }
+    }
+}
+
+.modal-user{
+    label{
+        font-size: 0.75rem;
+        color: $unne-primary;
+        margin-bottom: 0;
+    }
+    p{
+        color: $active;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+}
